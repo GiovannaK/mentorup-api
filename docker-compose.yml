@@ -1,0 +1,90 @@
+version: '3.7'
+volumes:
+  redis-data:
+  mongodb_master_data:
+    driver: local
+services:
+  backend:
+    container_name: api
+    image: api-dev
+    build:
+      context: .
+      dockerfile: ./Dockerfile.dev
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app/:z
+    ports:
+      - '3000:3000'
+      - '9229:9229'
+    environment:
+      NODE_ENV: development
+      # NEST_DEBUG: 'true'
+      DB_CONNECT_URL: mongodb://root:password123@api_mongodb-primary:27017/mentorup?authSource=admin&replicaSet=replicaset&w=majority&retryWrites=true
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      DD_ENV: 'development'
+      DD_SERVICE: 'api'
+      DD_VERSION: 'v0.2.0'
+    links:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+      - redis
+    depends_on:
+      - mongodb-primary
+      - mongodb-secondary
+      - mongodb-arbiter
+  mongodb-primary:
+    container_name: api_mongodb-primary
+    image: 'ghcr.io/zcube/bitnami-compat/mongodb:6.0.3-debian-11-r50'
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-primary
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+    ports:
+      - 27017:27017
+
+    volumes:
+      - 'mongodb_master_data:/bitnami'
+
+  mongodb-secondary:
+    container_name: api_mongodb-secondary
+    image: 'ghcr.io/zcube/bitnami-compat/mongodb:6.0.3-debian-11-r50'
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-secondary
+      - MONGODB_REPLICA_SET_MODE=secondary
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+    ports:
+      - 27018:27017
+
+  mongodb-arbiter:
+    container_name: api_mongodb-arbiter
+    image: 'ghcr.io/zcube/bitnami-compat/mongodb:6.0.3-debian-11-r50'
+    depends_on:
+      - mongodb-primary
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-arbiter
+      - MONGODB_REPLICA_SET_MODE=arbiter
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-primary
+      - MONGODB_INITIAL_PRIMARY_PORT_NUMBER=27017
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+    ports:
+      - 27019:27017
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    hostname: redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data

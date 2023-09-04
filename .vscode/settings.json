@@ -1,0 +1,10 @@
+{
+  "files.exclude": {
+    "**/node_modules": true
+  },
+  "eslint.format.enable": true,
+  "prettier.prettierPath": "./node_modules/prettier",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  }
+}

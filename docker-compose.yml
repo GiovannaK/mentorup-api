@@ -15,12 +15,14 @@ services:
     volumes:
       - .:/app/:z
     ports:
-      - '3000:3000'
+      - '4000:4000'
       - '9229:9229'
     environment:
       NODE_ENV: development
       # NEST_DEBUG: 'true'
       DB_CONNECT_URL: mongodb://root:password123@api_mongodb-primary:27017/mentorup?authSource=admin&replicaSet=replicaset&w=majority&retryWrites=true
+
+      PORT: 4000
 
       REDIS_HOST: redis
       REDIS_PORT: 6379
